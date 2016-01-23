@@ -3,7 +3,7 @@ using System.Collections;
 
 public class Player : MonoBehaviour
 {
-    private Rigidbody2D myRigidBody;
+    
     private Animator myAnimator;
 
     [SerializeField]
@@ -21,12 +21,6 @@ public class Player : MonoBehaviour
     [SerializeField]
     private LayerMask whatIsGrounded;
 
-    private bool isGrounded;
-
-    private bool jump;
-
-    private bool flyingKick;
-
     [SerializeField]
     private bool airControl;
 
@@ -35,13 +29,17 @@ public class Player : MonoBehaviour
 
     private bool facingRight;
 
-    private bool uppercutAttack;
+    public Rigidbody2D myRigidbody { get; set; }
+
+    public bool Attack { get; set; }
+    public bool Jump { get; set; }
+    public bool OnGround { get; set; }
 
     // Use this for initialization
     void Start()
     {
         facingRight = true;
-        myRigidBody = GetComponent<Rigidbody2D>();
+        myRigidbody = GetComponent<Rigidbody2D>();
         myAnimator = GetComponent<Animator>();
     }
 
@@ -54,69 +52,35 @@ public class Player : MonoBehaviour
     {
         float horizontal = Input.GetAxis("Horizontal");//Move para esquerda e direita ( eixo x)
 
-        isGrounded = IsGrounded();
+        OnGround = IsGrounded();
 
         HandleMovement(horizontal);
 
         //Chama a função de virar o personagem para o lado que o botão está sendo pressionado.
         Flip(horizontal);
 
-        HandleAttacks();
-
         HandleLayers();
-
-        ResetValues();
     }
 
     private void HandleMovement(float horizontal)
     {   
-        //Se estivermos caindo, a animação de caindo será setada para true
-        if(myRigidBody.velocity.y < 0)
+        //Se a velocidade do player no eixo y for menor que 0, então ele está no chão ( não está no ar - pulando)
+        if(myRigidbody.velocity.y < 0)
         {
             myAnimator.SetBool("land", true);
         }
 
-        //Pega o estado atual do layer 0 ( layer base) e verifica se está a tag referente à ele é "Attack"
-        //Se a tag não for "Attack", o personagem não está atacando, e só então ele pode se mover.
-        if(!this.myAnimator.GetCurrentAnimatorStateInfo(0).IsTag("Attack"))
+        if(!Attack && (OnGround || airControl))
         {
-            myRigidBody.velocity = new Vector2(horizontal * movementSpeed, myRigidBody.velocity.y);
+            myRigidbody.velocity = new Vector2(horizontal * movementSpeed, myAnimator.velocity.y);
         }
 
-        //If estranho. Se ele está no chão e pulando ao mesmo tempo, então ele não está no chão. Logo, ele está pulando.
-        if(isGrounded && jump)
+        if(Jump && myRigidbody.velocity.y == 0)
         {
-            isGrounded = false;
-            //Adiciona uma força que o impulsiona para cima no pulo
-            myRigidBody.AddForce(new Vector2(0, jumpForce));
-            //Chama a animação de pular.
-            myAnimator.SetTrigger("jump");
-        }
-               
-        myAnimator.SetFloat("speed", Mathf.Abs(horizontal));//Horizontal permite movimentos em x negativo, porém ele deve sempre retornar um número positivo para o animator.
-
-    }
-
-    private void HandleAttacks()
-    {
-        //Se ele executa o uppercut, esse if impede que ele se movimente ao mesmo tempo que ataque.
-        if(uppercutAttack && isGrounded && !this.myAnimator.GetCurrentAnimatorStateInfo(0).IsTag("Attack") && (isGrounded || airControl))
-        {
-            myAnimator.SetTrigger("uppercut");
-            //Desliga a inércia do rigidBody depois de atacar, para evitar que o personagem deslize.
-            myRigidBody.velocity = Vector2.zero;
+            myRigidbody.AddForce(new Vector2(0, jumpForce));
         }
 
-        //Se pressionarmos o botão de flying kick e não estamos no chão e nem estamos fazendo já o flyingKick, então:
-        if(flyingKick && !isGrounded && !this.myAnimator.GetCurrentAnimatorStateInfo(1).IsName("flyingKick"))
-        {
-            myAnimator.SetBool("flyingKick", true);
-        }
-
-        if (!flyingKick && !this.myAnimator.GetCurrentAnimatorStateInfo(1).IsName("flyingKick"))
-        {
-            myAnimator.SetBool("flyingKick", false);
-        }
+        myAnimator.SetFloat("speed", Mathf.Abs(horizontal));
     }
 
     private void HandleInputs()
@@ -124,15 +88,14 @@ public class Player : MonoBehaviour
         //Aperta o espaço para pular
         if(Input.GetKeyDown(KeyCode.Space))
         {
-            jump = true;
+            
         }
 
 
         //Pressiona leftShift para realizar um uppercut
         if(Input.GetKeyDown(KeyCode.LeftShift))
         {
-            uppercutAttack = true;
-            flyingKick = true;
+            
         }
     }
 
@@ -149,19 +112,11 @@ public class Player : MonoBehaviour
         }
     }
 
-    //Função responsável por resetar os valores pertinentes, para que eles não fiquem executando eternamente.
-    private void ResetValues()
-    {
-        uppercutAttack = false;
-        jump = false;
-        flyingKick = false;
-    }
-
     //Função responsável por verificar se o player está no chão
     private bool IsGrounded()
     {
         //Verifica se o player está caindo
-        if(myRigidBody.velocity.y <= 0)
+        if(myRigidbody.velocity.y <= 0)
         {
             //Se o player estiver caindo, ele percorrerá todos os gameObjects no pé do player
             foreach(Transform point in groundPoints)
@@ -175,10 +130,6 @@ public class Player : MonoBehaviour
                     //Retornarmos true se colidimos com alguma coisa que não seja o player, com os pés. 
                     if(colliders[i].gameObject != gameObject)
                     {
-                        //se o player está no chão, temos que resetar a sua habilidade de pular ou ele ficará pulando infinitamente.
-                        myAnimator.ResetTrigger("jump");
-                        //Quando terminarmos de chegar ao chão ( land), não precisaremos mais realizar essa tarefa enquanto estivermos no chão.
-                        myAnimator.SetBool("land", false);
                         return true;
                     }
                 }
@@ -190,7 +141,7 @@ public class Player : MonoBehaviour
     private void HandleLayers()
     {
         //Se o player não está no chão, ou seja, está no ar:
-        if(!isGrounded)
+        if(!OnGround)
         {
             //Coloca o peso do layer 1 para 1, tendo prioridade sobre os layers que tiverem peso abaixo dele.
             myAnimator.SetLayerWeight(1, 1);
