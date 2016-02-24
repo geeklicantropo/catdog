@@ -3,7 +3,20 @@ using System.Collections;
 
 public class Player : MonoBehaviour
 {
-    
+    //Criando um Singleton
+    private static Player instance;
+    public static Player Instance
+    {
+        get
+        {
+            if(instance == null)
+            {
+                instance = GameObject.FindObjectOfType<Player>();
+            }
+            return instance;
+        }
+    }
+
     private Animator myAnimator;
 
     [SerializeField]
@@ -29,17 +42,19 @@ public class Player : MonoBehaviour
 
     private bool facingRight;
 
-    public Rigidbody2D myRigidbody { get; set; }
+    public Rigidbody2D MyRigidbody { get; set; }
 
+    //São os chamados propriedades, que servem para usar essas funções em outros lugares depois. Por isso, eles possuem letra maiúscula 
     public bool Attack { get; set; }
     public bool Jump { get; set; }
     public bool OnGround { get; set; }
+
 
     // Use this for initialization
     void Start()
     {
         facingRight = true;
-        myRigidbody = GetComponent<Rigidbody2D>();
+        MyRigidbody = GetComponent<Rigidbody2D>();
         myAnimator = GetComponent<Animator>();
     }
 
@@ -65,19 +80,19 @@ public class Player : MonoBehaviour
     private void HandleMovement(float horizontal)
     {   
         //Se a velocidade do player no eixo y for menor que 0, então ele está no chão ( não está no ar - pulando)
-        if(myRigidbody.velocity.y < 0)
+        if(MyRigidbody.velocity.y < 0)
         {
             myAnimator.SetBool("land", true);
         }
 
         if(!Attack && (OnGround || airControl))
         {
-            myRigidbody.velocity = new Vector2(horizontal * movementSpeed, myAnimator.velocity.y);
+            MyRigidbody.velocity = new Vector2(horizontal * movementSpeed, MyRigidbody.velocity.y);
         }
 
-        if(Jump && myRigidbody.velocity.y == 0)
+        if(Jump && MyRigidbody.velocity.y == 0)
         {
-            myRigidbody.AddForce(new Vector2(0, jumpForce));
+            MyRigidbody.AddForce(new Vector2(0, jumpForce));
         }
 
         myAnimator.SetFloat("speed", Mathf.Abs(horizontal));
@@ -88,15 +103,21 @@ public class Player : MonoBehaviour
         //Aperta o espaço para pular
         if(Input.GetKeyDown(KeyCode.Space))
         {
-            
+            myAnimator.SetTrigger("jump");
         }
 
 
         //Pressiona leftShift para realizar um uppercut
         if(Input.GetKeyDown(KeyCode.LeftShift))
         {
-            
+            myAnimator.SetTrigger("uppercut");
         }
+
+        //Botão de soltar o Hadouken
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+            myAnimator.SetTrigger("throw");
+        } 
     }
 
     //Vira o personagem para a direção horizontal em que o botão está sendo apertado
@@ -116,7 +137,7 @@ public class Player : MonoBehaviour
     private bool IsGrounded()
     {
         //Verifica se o player está caindo
-        if(myRigidbody.velocity.y <= 0)
+        if(MyRigidbody.velocity.y <= 0)
         {
             //Se o player estiver caindo, ele percorrerá todos os gameObjects no pé do player
             foreach(Transform point in groundPoints)
