@@ -40,6 +40,9 @@ public class Player : MonoBehaviour
     [SerializeField]
     private float jumpForce;
 
+    [SerializeField]
+    private GameObject hadoukenPrefab;
+
     private bool facingRight;
 
     public Rigidbody2D MyRigidbody { get; set; }
@@ -117,6 +120,7 @@ public class Player : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.V))
         {
             myAnimator.SetTrigger("throw");
+            ThrowHadouken(0);
         } 
     }
 
@@ -171,6 +175,22 @@ public class Player : MonoBehaviour
         {
             //Senão, o peso do layer do índice 1, será colocado para zero.
             myAnimator.SetLayerWeight(1, 0);
+        }
+    }
+
+    public void ThrowHadouken(int value)
+    {
+        if(facingRight)
+        {
+            //Instancia o hadouken na cena para a direita.
+            GameObject temp = (GameObject)Instantiate(hadoukenPrefab, transform.position, Quaternion.Euler(new Vector3(0, 0,0)));
+            temp.GetComponent<Hadouken>().Initialize(Vector2.right); 
+        }
+        else
+        {
+            //Instancia o hadouken na cena para a esquerda.
+            GameObject temp = (GameObject)Instantiate(hadoukenPrefab, transform.position, Quaternion.Euler(new Vector3(0, 0, 180)));
+            temp.GetComponent<Hadouken>().Initialize(Vector2.left);
         }
     }
 }
