@@ -4,5 +4,7 @@ obj/
 .vs/
 # Build results
 Build/
+Builds/
+Temp/
 *.userprefs
 

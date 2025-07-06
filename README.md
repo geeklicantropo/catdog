@@ -24,3 +24,5 @@ Inside Unity go to `File` ▶︎ `Build Settings` and add `cena1` to the build s
 ## Notes
 
 This repository includes Unity's `Library` folder for completeness. When making changes it is recommended to ignore the `Library`, `obj`, and `.vs` directories by using the provided `.gitignore`.
+
+The game scripts were refactored to use modern C# patterns and clearer naming so the prototype can be more easily extended.

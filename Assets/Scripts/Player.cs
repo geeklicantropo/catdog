@@ -1,159 +1,117 @@
-﻿using UnityEngine;
-using System.Collections;
+using UnityEngine;
 
+/// <summary>
+/// Basic platformer player with simple movement, jump and projectile logic.
+/// </summary>
 public class Player : MonoBehaviour
 {
-    //Criando um Singleton
-    private static Player instance;
-    public static Player Instance
-    {
-        get
-        {
-            if(instance == null)
-            {
-                instance = GameObject.FindObjectOfType<Player>();
-            }
-            return instance;
-        }
-    }
+    public static Player Instance { get; private set; }
 
-    private Animator myAnimator;
+    [SerializeField] private float movementSpeed = 5f;
+    [SerializeField] private Transform[] groundPoints;
+    [SerializeField] private float groundRadius = 0.1f;
+    [SerializeField] private LayerMask groundMask;
+    [SerializeField] private bool airControl = true;
+    [SerializeField] private float jumpForce = 300f;
+    [SerializeField] private GameObject hadoukenPrefab;
 
-    [SerializeField]
-    private float movementSpeed;
+    private Animator animator;
+    public Rigidbody2D Body { get; private set; }
+    private bool facingRight = true;
 
-    //São os colliders no pé do player
-    [SerializeField]
-    private Transform[] groundPoints;
-
-    //Collider circular que ficará em volta dos groundPoints no pé do player
-    [SerializeField]
-    private float groundRadius;
-
-    //Indica em qual layer algo está
-    [SerializeField]
-    private LayerMask whatIsGrounded;
-
-    [SerializeField]
-    private bool airControl;
-
-    [SerializeField]
-    private float jumpForce;
-
-    [SerializeField]
-    private GameObject hadoukenPrefab;
-
-    private bool facingRight;
-
-    public Rigidbody2D MyRigidbody { get; set; }
-
-    //São os chamados propriedades, que servem para usar essas funções em outros lugares depois. Por isso, eles possuem letra maiúscula 
     public bool Attack { get; set; }
     public bool Jump { get; set; }
-    public bool OnGround { get; set; }
+    public bool OnGround { get; private set; }
 
-
-    // Use this for initialization
-    void Start()
+    private void Awake()
     {
-        facingRight = true;
-        MyRigidbody = GetComponent<Rigidbody2D>();
-        myAnimator = GetComponent<Animator>();
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+
+        Body = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
     }
 
-    void Update()
+    private void Update()
     {
         HandleInputs();
     }
-    // Update is called once per frame
-    void FixedUpdate()
+
+    private void FixedUpdate()
     {
-        float horizontal = Input.GetAxis("Horizontal");//Move para esquerda e direita ( eixo x)
-
+        float horizontal = Input.GetAxis("Horizontal");
         OnGround = IsGrounded();
-
         HandleMovement(horizontal);
-
-        //Chama a função de virar o personagem para o lado que o botão está sendo pressionado.
         Flip(horizontal);
-
         HandleLayers();
     }
 
     private void HandleMovement(float horizontal)
-    {   
-        //Se a velocidade do player no eixo y for menor que 0, então ele está no chão ( não está no ar - pulando)
-        if(MyRigidbody.velocity.y < 0)
+    {
+        if (Body.velocity.y < 0f)
         {
-            myAnimator.SetBool("land", true);
+            animator.SetBool("land", true);
         }
 
-        if(!Attack && (OnGround || airControl))
+        if (!Attack && (OnGround || airControl))
         {
-            MyRigidbody.velocity = new Vector2(horizontal * movementSpeed, MyRigidbody.velocity.y);
+            Body.velocity = new Vector2(horizontal * movementSpeed, Body.velocity.y);
         }
 
-        if(Jump && MyRigidbody.velocity.y == 0)
+        if (Jump && Mathf.Abs(Body.velocity.y) < 0.01f)
         {
-            MyRigidbody.AddForce(new Vector2(0, jumpForce));
+            Body.AddForce(new Vector2(0f, jumpForce));
         }
 
-        myAnimator.SetFloat("speed", Mathf.Abs(horizontal));
+        animator.SetFloat("speed", Mathf.Abs(horizontal));
     }
 
     private void HandleInputs()
     {
-        //Aperta o espaço para pular
-        if(Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space))
         {
-            myAnimator.SetTrigger("jump");
+            animator.SetTrigger("jump");
         }
 
-
-        //Pressiona leftShift para realizar um uppercut
-        if(Input.GetKeyDown(KeyCode.LeftShift))
+        if (Input.GetKeyDown(KeyCode.LeftShift))
         {
-            myAnimator.SetTrigger("uppercut");
+            animator.SetTrigger("uppercut");
         }
 
-        //Botão de soltar o Hadouken
         if (Input.GetKeyDown(KeyCode.V))
         {
-            myAnimator.SetTrigger("throw");
-            ThrowHadouken(0);
-        } 
-    }
-
-    //Vira o personagem para a direção horizontal em que o botão está sendo apertado
-    private void Flip(float horizontal)
-    {
-        if((horizontal > 0 && !facingRight) ||(horizontal < 0 && facingRight))
-        {
-            facingRight = !facingRight;
-
-            Vector3 theScale = transform.localScale;
-            theScale.x *= -1;
-            transform.localScale = theScale;
+            animator.SetTrigger("throw");
+            ThrowHadouken();
         }
     }
 
-    //Função responsável por verificar se o player está no chão
+    private void Flip(float horizontal)
+    {
+        if ((horizontal > 0 && !facingRight) || (horizontal < 0 && facingRight))
+        {
+            facingRight = !facingRight;
+            Vector3 scale = transform.localScale;
+            scale.x *= -1;
+            transform.localScale = scale;
+        }
+    }
+
     private bool IsGrounded()
     {
-        //Verifica se o player está caindo
-        if(MyRigidbody.velocity.y <= 0)
+        if (Body.velocity.y <= 0f)
         {
-            //Se o player estiver caindo, ele percorrerá todos os gameObjects no pé do player
-            foreach(Transform point in groundPoints)
+            foreach (Transform point in groundPoints)
             {
-                //colliders conterão todos os pontos em que o groundRadius está circundando.
-                Collider2D[] colliders = Physics2D.OverlapCircleAll(point.position, groundRadius, whatIsGrounded);
-
-                for (int i = 0; i < colliders.Length; i++)
+                Collider2D[] colliders = Physics2D.OverlapCircleAll(point.position, groundRadius, groundMask);
+                foreach (var collider in colliders)
                 {
-                    //Se o collider sendo verificado nesse momento, não é o player (gameObject), faça:
-                    //Retornarmos true se colidimos com alguma coisa que não seja o player, com os pés. 
-                    if(colliders[i].gameObject != gameObject)
+                    if (collider.gameObject != gameObject)
                     {
                         return true;
                     }
@@ -165,32 +123,14 @@ public class Player : MonoBehaviour
 
     private void HandleLayers()
     {
-        //Se o player não está no chão, ou seja, está no ar:
-        if(!OnGround)
-        {
-            //Coloca o peso do layer 1 para 1, tendo prioridade sobre os layers que tiverem peso abaixo dele.
-            myAnimator.SetLayerWeight(1, 1);
-        }
-        else
-        {
-            //Senão, o peso do layer do índice 1, será colocado para zero.
-            myAnimator.SetLayerWeight(1, 0);
-        }
+        animator.SetLayerWeight(1, OnGround ? 0 : 1);
     }
 
-    public void ThrowHadouken(int value)
+    public void ThrowHadouken()
     {
-        if(facingRight)
-        {
-            //Instancia o hadouken na cena para a direita.
-            GameObject temp = (GameObject)Instantiate(hadoukenPrefab, transform.position, Quaternion.Euler(new Vector3(0, 0,0)));
-            temp.GetComponent<Hadouken>().Initialize(Vector2.right); 
-        }
-        else
-        {
-            //Instancia o hadouken na cena para a esquerda.
-            GameObject temp = (GameObject)Instantiate(hadoukenPrefab, transform.position, Quaternion.Euler(new Vector3(0, 0, 180)));
-            temp.GetComponent<Hadouken>().Initialize(Vector2.left);
-        }
+        Vector3 rotation = facingRight ? Vector3.zero : new Vector3(0f, 0f, 180f);
+        Vector2 direction = facingRight ? Vector2.right : Vector2.left;
+        GameObject projectile = Instantiate(hadoukenPrefab, transform.position, Quaternion.Euler(rotation));
+        projectile.GetComponent<Hadouken>().Initialize(direction);
     }
 }

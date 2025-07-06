@@ -1,37 +1,29 @@
-﻿using UnityEngine;
-using System.Collections;
+using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D))] 
+[RequireComponent(typeof(Rigidbody2D))]
 public class Hadouken : MonoBehaviour
 {
-    [SerializeField]
-    private float speed;
+    [SerializeField] private float speed = 5f;
 
-    private Rigidbody2D myRigidBody;
+    private Rigidbody2D rb;
+    private Vector2 direction = Vector2.right;
 
-    //Decide qual direção o Hadouken é lançado de acordo de onde o player está olhando.
-    private Vector2 direction;
-
-
-	// Use this for initialization
-	void Start ()
+    private void Start()
     {
-        myRigidBody = GetComponent<Rigidbody2D>();
+        rb = GetComponent<Rigidbody2D>();
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
-        myRigidBody.velocity = direction * speed;
+        rb.velocity = direction * speed;
     }
 
-    //Ao ser instanciado no player, dá a direção da onde o hadouken deve avançar de acordo com para onde o player está olhando.
-    public void Initialize(Vector2 direction)
+    public void Initialize(Vector2 dir)
     {
-        this.direction = direction;
+        direction = dir;
     }
 
-    //Essa função executa a ação contida em seu escopo quando o gameObject ficar invisível para as camêras. ( Sair da tela).
-    void OnBecameInvisible()
+    private void OnBecameInvisible()
     {
         Destroy(gameObject);
     }
