@@ -1,0 +1,8 @@
+# Ignore Unity specific folders
+Library/
+obj/
+.vs/
+# Build results
+Build/
+*.userprefs
+
